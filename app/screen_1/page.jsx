@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { FilterDrawer } from "../component/filter-slide";
-import { SearchInput } from "../component/search-input";
-import Pagination from "@/app/components/pagination"; 
+import { FilterDrawer } from "../components/filter-slide";
+import { SearchInput } from "../components/search-input";
+import KebabMenu from "@/app/components/kebabMenu";
+import Pagination from "@/app/components/pagination";
+import Swal from "sweetalert2";
 
 const BASE_URL = "http://localhost:3000/api";
 
@@ -13,37 +15,22 @@ const ApiService = {
     return fetch(`${BASE_URL}/ucHeader?${query}`).then((r) => r.json());
   },
   createItem: (data) =>
-    fetch(BASE_URL, {
+    fetch(`${BASE_URL}/ucHeader`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }).then((r) => r.json()),
   updateItem: (data) =>
-    fetch(BASE_URL, {
+    fetch(`${BASE_URL}/ucHeader`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }).then((r) => r.json()),
-  deleteItems: (uids) =>
-    fetch(BASE_URL, {
+  deleteItem: (uid) =>
+    fetch(`${BASE_URL}/ucHeader?UID=${uid}`, {
       method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ uids }),
     }).then((r) => r.json()),
 };
-
-// ============================================================
-// SweetAlert2 helper (ต้อง include script ใน index.html)
-// ============================================================
-const Swal =
-  typeof window !== "undefined" && window.Swal
-    ? window.Swal
-    : {
-      fire: ({ title, text, icon }) => {
-        alert(`[${icon?.toUpperCase()}] ${title}\n${text || ""}`);
-        return Promise.resolve({ isConfirmed: true });
-      },
-    };
 
 // ============================================================
 // Icons
@@ -66,20 +53,6 @@ const IconTrash = ({ className = "w-4 h-4" }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
       d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-  </svg>
-);
-
-const IconChevronLeft = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="none"
-    stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="h-5 w-5">
-    <path strokeLinecap="round" strokeLinejoin="round" d="m15 19-7-7 7-7" />
-  </svg>
-);
-
-const IconChevronRight = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="none"
-    stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="h-5 w-5">
-    <path strokeLinecap="round" strokeLinejoin="round" d="m9 5 7 7-7 7" />
   </svg>
 );
 
@@ -161,7 +134,7 @@ function Modal({ show, onClose, title, children, footer }) {
 // ============================================================
 // ItemForm Component
 // ============================================================
-function ItemForm({ item, onChange }) {
+function ItemForm({ item, onChange, unitList }) {
   const field = (name, label, type = "text", placeholder = "", required = false) => (
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -179,23 +152,23 @@ function ItemForm({ item, onChange }) {
 
   return (
     <>
-      {/* {field("workDetail", "รายละเอียดงาน", "text", "รายละเอียดงาน", true)}
-      {field("fiscal", "ปีงบประมาณ", "text", "เช่น 2565")}
-      {field("typeId", "รหัสประเภท", "number", "รหัสประเภท")} */}
       <label className="text-label">ชื่อวัสดุ</label>
-      <input className="custom-input" type="text" value={item.name} placeholder="ชื่อวัสดุ" />
+      <input className="custom-input" type="text" value={item.header_name} placeholder="ชื่อวัสดุ" onChange={(e) => onChange({ ...item, header_name: e.target.value })} />
 
       <label className="text-label mt-3">UOM</label>
-      <select value={item.unitId}
+      <select value={item.unitId} onChange={(e) => onChange({ ...item, unitId: e.target.value })}
         className="custom-input"
-        placeholder="กรุณาเลือก">
-        <option value="active">Active</option>
-        <option value="inactive">Inactive</option>
-        <option value="pending">Pending</option>
+        placeholder="ค้นหา">
+        <option value="">กรุณาเลือก</option>
+        {unitList.map((unit) => (
+          <option key={unit.value} value={unit.value}>
+            {unit.label}
+          </option>
+        ))}
       </select>
 
       <label className="text-label mt-3">รหัสกระทรวงพาณิชย์</label>
-      <input className="custom-input" type="text" value={item.gfmis} placeholder="รหัสกระทรวงพาณิชย์" />
+      <input className="custom-input" type="text" value={item.header_code} placeholder="รหัสกระทรวงพาณิชย์" onChange={(e) => onChange({ ...item, header_code: e.target.value })} />
 
 
     </>
@@ -205,13 +178,15 @@ function ItemForm({ item, onChange }) {
 // ============================================================
 // Main BudgetApp Component
 // ============================================================
-const EMPTY_ITEM = { workDetail: "", fiscal: "", typeId: null, remark: "" };
-const EMPTY_FILTERS = { name: "", gfmis: "", unitId: "", itemStatus: "", searchText: "" };
+const EMPTY_ITEM = { header_name: "", header_code: "", fiscal: "", unitId: "", remark: "" };
+const EMPTY_FILTERS = { header_name: "", header_code: "", unitId: "", itemStatus: "", searchText: "" };
 
 export default function BudgetApp() {
   // Data
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [unitList, setUnits] = useState([]);
+  const [activeMenu, setActiveMenu] = useState(null);
 
   // Selection
   const [selectedUids, setSelectedUids] = useState(new Set());
@@ -242,8 +217,8 @@ export default function BudgetApp() {
     setIsLoading(true);
     try {
       const params = {};
-      if (f.gfmis) params.gfmis = f.gfmis;
-      if (f.name) params.name = f.name;
+      if (f.header_code) params.header_code = f.header_code;
+      if (f.header_name) params.header_name = f.header_name;
       if (f.unitId) params.unitId = f.unitId;
 
       const res = await ApiService.callScreen1(params);
@@ -261,32 +236,42 @@ export default function BudgetApp() {
     }
   }, []);
 
-  useEffect(() => { loadData(EMPTY_FILTERS); }, []);
+  const loadUnitList = useCallback(async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/selectionUnit`, { method: "GET" });
+      const data = await res.json();
+      const rawUnits = Array.isArray(data)
+        ? data
+        : Array.isArray(data.units)
+          ? data.units
+          : [];
+      setUnits(rawUnits.map((u) => ({ value: u.UID, label: u.unit_name })));
+      if (data.materials) setMaterials(data.materials);
+      if (data.laborTypes) setLaborTypes(data.laborTypes);
+    } catch (err) {
+      console.error("Error loading selections:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData(EMPTY_FILTERS);
+    loadUnitList();
+  }, []);
 
   // ── Filter handlers ──────────────────────────────────────
   const handleFilterChange = (key, value) => {
     const next = { ...filters, [key]: value };
     setFilters(next);
-    loadData(next);
+  };
+
+  const searchFilter = (key, value) => {
+    const next = { ...filters, [key]: value };
+    loadData(next)
   };
 
   const clearFilters = () => {
     setFilters(EMPTY_FILTERS);
     loadData(EMPTY_FILTERS);
-  };
-
-  // ── Selection handlers ───────────────────────────────────
-  const toggleSelectAll = () => {
-    if (allSelected) setSelectedUids(new Set());
-    else setSelectedUids(new Set(items.map((i) => i.uid)));
-  };
-
-  const toggleItem = (uid) => {
-    setSelectedUids((prev) => {
-      const next = new Set(prev);
-      next.has(uid) ? next.delete(uid) : next.add(uid);
-      return next;
-    });
   };
 
   // ── CRUD ─────────────────────────────────────────────────
@@ -299,56 +284,83 @@ export default function BudgetApp() {
 
   const openEditDialog = (item) => {
     setIsEditMode(true);
-    setEditingUid(item.uid);
-    setFormItem({ workDetail: item.workDetail || "", fiscal: item.fiscal || "", typeId: item.typeId || null, remark: item.remark || "" });
+    setEditingUid(item.UID);
+    setFormItem({ header_name: item.header_name || "", header_code: item.header_code || "", unitId: item.unitId || "", remark: item.remark || "" });
     setShowDialog(true);
   };
 
   const saveItem = async () => {
-    if (!formItem.workDetail) {
-      Swal.fire("แจ้งเตือน", "กรุณากรอกรายละเอียดงาน", "warning");
+    if (!formItem.header_name) {
+      Swal.fire("แจ้งเตือน", "กรุณากรอก ชื่อวัสดุ", "warning");
       return;
     }
-    setIsLoading(true);
-    try {
-      const res = isEditMode
-        ? await ApiService.updateItem({ uid: editingUid, ...formItem })
-        : await ApiService.createItem(formItem);
 
-      if (res.success) {
-        setShowSuccess(true);
-        loadData(filters);
-      } else {
-        Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาด: " + res.error, "error");
-      }
-    } catch {
-      Swal.fire("ผิดพลาด!", isEditMode ? "ไม่สามารถแก้ไขข้อมูลได้" : "ไม่สามารถบันทึกข้อมูลได้", "error");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const deleteSelected = async () => {
-    if (selectedUids.size === 0) {
-      Swal.fire("แจ้งเตือน", "กรุณาเลือกรายการที่ต้องการลบ", "warning");
+    if (!formItem.unitId) {
+      Swal.fire("แจ้งเตือน", "กรุณาเลือก UOM", "warning");
       return;
     }
+
+    if (!formItem.header_code) {
+      Swal.fire("แจ้งเตือน", "กรุณากรอก รหัสกระทรวงพาณิชย์", "warning");
+      return;
+    }
+
     const result = await Swal.fire({
-      title: "ยืนยันการลบ",
-      text: `ต้องการลบรายการที่เลือกทั้งหมด ${selectedUids.size} รายการ หรือไม่?`,
-      icon: "warning",
+      title: "ยืนยันการบันทึก",
+      text: "ต้องการบันทึกข้อมูลนี้หรือไม่?",
+      icon: "question",
       showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "ลบทั้งหมด",
+      confirmButtonText: "บันทึก",
       cancelButtonText: "ยกเลิก",
+      buttonsStyling: false,  // ปิด style default ของ Swal
+      customClass: {
+        confirmButton: "sweet-confirm mr-2",
+        cancelButton: "sweet-cancel",
+      },
     });
+
     if (result.isConfirmed) {
       setIsLoading(true);
       try {
-        const res = await ApiService.deleteItems([...selectedUids]);
+        const res = isEditMode
+          ? await ApiService.updateItem({ UID: editingUid, ...formItem })
+          : await ApiService.createItem(formItem);
+
         if (res.success) {
-          Swal.fire("สำเร็จ!", "ลบข้อมูลทั้งหมดสำเร็จ", "success");
+          setShowSuccess(true);
+          loadData(filters);
+        } else {
+          Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาด: " + res.error, "error");
+        }
+      } catch {
+        Swal.fire("ผิดพลาด!", isEditMode ? "ไม่สามารถแก้ไขข้อมูลได้" : "ไม่สามารถบันทึกข้อมูลได้", "error");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  const deleteSelected = async (uid) => {
+    const result = await Swal.fire({
+      title: "ยืนยันการลบ",
+      text: "ต้องการลบข้อมูลนี้หรือไม่?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "ยืนยัน",
+      cancelButtonText: "ยกเลิก",
+      buttonsStyling: false,  // ปิด style default ของ Swal
+      customClass: {
+        confirmButton: "sweet-confirm mr-2",
+        cancelButton: "sweet-cancel",
+      },
+    });
+
+    if (result.isConfirmed) {
+      setIsLoading(true);
+      try {
+        const res = await ApiService.deleteItem(uid);
+        if (res) {
+          Swal.fire("สำเร็จ!", "ลบข้อมูลดสำเร็จ", "success");
           setSelectedUids(new Set());
           loadData(filters);
         } else {
@@ -404,11 +416,6 @@ export default function BudgetApp() {
               <IconRefresh />Refresh
             </button>
 
-            <button onClick={deleteSelected} disabled={selectedUids.size === 0}
-              className="button-primary-border">
-              <IconTrash />ลบที่เลือก ({selectedUids.size})
-            </button>
-
             <button onClick={openNewDialog}
               className="button-primary">
               <IconAdd />เพิ่มข้อมูล
@@ -423,13 +430,13 @@ export default function BudgetApp() {
           <FilterDrawer
             open={drawerOpen}
             onClose={() => setDrawerOpen(false)}
-            onSearch={clearFilters}
+            onSearch={searchFilter}
             onClear={clearFilters}
           >
             <div className="grid grid-cols-1 gap-4 mb-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">วัสดุ</label>
-                <input type="text" value={filters.name}
+                <input type="text" value={filters.header_name}
                   onChange={(e) => handleFilterChange("name", e.target.value)}
                   className="custom-input"
                   placeholder="วัสดุ..." />
@@ -438,8 +445,8 @@ export default function BudgetApp() {
               {/* GFMIS */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">รหัสกระทรวงพาณิชย์</label>
-                <input type="text" value={filters.gfmis}
-                  onChange={(e) => handleFilterChange("gfmis", e.target.value)}
+                <input type="text" value={filters.header_code}
+                  onChange={(e) => handleFilterChange("header_code", e.target.value)}
                   className="custom-input"
                   placeholder="รหัสกระทรวงพาณิชย์" />
               </div>
@@ -451,10 +458,12 @@ export default function BudgetApp() {
                   onChange={(e) => handleFilterChange("unitId", e.target.value)}
                   className="custom-input"
                   placeholder="ค้นหา">
-                  <option value="">-- ทั้งหมด --</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="pending">Pending</option>
+                  <option value="">ทั้งหมด</option>
+                  {unitList.map((unit) => (
+                    <option key={unit.value} value={unit.value}>
+                      {unit.label}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -467,12 +476,7 @@ export default function BudgetApp() {
             <table className="modern-table w-full text-black">
               <thead className="bg-gray-50/50">
                 <tr>
-                  {/* <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
-                    <div className="flex justify-center">
-                      <Checkbox checked={allSelected} indeterminate={someSelected} onChange={toggleSelectAll} />
-                    </div>
-                  </th> */}
-                  {["No.", "รหัส", "ปี", "ประเภท", "รายการ"].map((h) => (
+                  {["", "No.", "รหัส", "ปี", "ประเภท", "รายการ"].map((h) => (
                     <th key={h} className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
                       {h}
                     </th>
@@ -490,14 +494,36 @@ export default function BudgetApp() {
                   </tr>
                 ) : (
                   pagedItems.map((item, idx) => (
-                    <tr key={item.uid ?? idx}
+                    <tr key={item.UID ?? idx}
                       className={`cursor-pointer transition-colors hover:bg-yellow-50 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
-                      onDoubleClick={() => openEditDialog(item)}>
-                      {/* <td className="px-6 py-4 align-middle" onClick={(e) => { e.stopPropagation(); toggleItem(item.uid); }}>
-                        <div className="flex justify-center">
-                          <Checkbox checked={selectedUids.has(item.uid)} onChange={() => toggleItem(item.uid)} />
-                        </div>
-                      </td> */}
+                    >
+                      <td>
+                        <KebabMenu
+                          itemId={item.UID}
+                          activeMenu={activeMenu}
+                          setActiveMenu={setActiveMenu}
+                        >
+                          <button
+                            className="kebab-menu-item w-full"
+                            onClick={() => openEditDialog(item)}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                              stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                              <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                            <span>แก้ไขรายการ</span>
+                          </button>
+
+                          <button
+                            className="kebab-menu-item w-full text-red-500 hover:bg-red-50"
+                            onClick={() => deleteSelected(item.UID)}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-trash-fill" viewBox="0 0 16 16">
+                              <path d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5M8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5m3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0" />
+                            </svg>
+                            <span>ลบรายการ</span>
+                          </button>
+                        </KebabMenu>
+                      </td>
                       <td className="px-6 py-4 text-center align-middle text-sm text-gray-900 tabular-nums">
                         {(currentPage - 1) * itemsPerPage + idx + 1}
                       </td>
@@ -505,9 +531,6 @@ export default function BudgetApp() {
                       <td className="px-6 py-4 align-middle text-sm text-gray-900">{item.fiscal}</td>
                       <td className="px-6 py-4 align-middle text-sm text-gray-900">{item.header_type}</td>
                       <td className="px-6 py-4 align-middle text-sm text-gray-900">{item.header_name}</td>
-                      {/* <td className={`px-6 py-4 align-middle text-sm ${statusClass(item.itemStatus)}`}>
-                        {item.itemStatus}
-                      </td> */}
                     </tr>
                   ))
                 )}
@@ -535,16 +558,16 @@ export default function BudgetApp() {
             <>
               <button type="button" onClick={() => setShowDialog(false)} style={{ width: "100px" }}
                 className="button-primary-border">
-                Cancel
+                ยกเลิก
               </button>
               <button type="button" onClick={saveItem} style={{ width: "100px" }}
                 className="button-primary">
-                Save
+                บันทึก
               </button>
             </>
           }
         >
-          <ItemForm item={formItem} onChange={setFormItem} />
+          <ItemForm item={formItem} onChange={setFormItem} unitList={unitList} />
         </Modal>
 
         {/* Success Modal */}
