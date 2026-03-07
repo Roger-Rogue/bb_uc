@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { FilterDrawer } from "../component/filter-slide";
 import { SearchInput } from "../component/search-input";
+import Pagination from "@/app/components/pagination"; 
 
 const BASE_URL = "http://localhost:3000/api";
 
@@ -369,6 +370,11 @@ export default function BudgetApp() {
     setCurrentPage(1);
   };
 
+  const changeItemsPerPage = (val) => {
+    setItemsPerPage(val);
+    setCurrentPage(1);
+  };
+
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // ── Status color ─────────────────────────────────────────
@@ -458,8 +464,8 @@ export default function BudgetApp() {
         {/* Data Table */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-sky-100 border-b border-gray-200">
+            <table className="modern-table w-full text-black">
+              <thead className="bg-gray-50/50">
                 <tr>
                   {/* <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
                     <div className="flex justify-center">
@@ -510,45 +516,14 @@ export default function BudgetApp() {
           </div>
 
           {/* Pagination */}
-          <div className="bg-white px-6 py-4 flex items-center justify-between border-t border-gray-200">
-            <div className="flex w-36 md:w-40">
-              <div className="relative w-full">
-                <select value={itemsPerPage} onChange={(e) => handleItemsPerPage(e.target.value)}
-                  className="block w-full appearance-none border border-gray-300 bg-gray-50 text-gray-900 focus:border-blue-500 focus:ring-blue-500 focus:outline-none focus:ring-1 p-2 sm:text-xs rounded-lg pr-8"
-                  style={{
-                    backgroundImage: `linear-gradient(to right, #d1d5db 1px, transparent 1px), url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                    backgroundPosition: "right 2rem center, right 0.5rem center",
-                    backgroundRepeat: "no-repeat, no-repeat",
-                    backgroundSize: "1px 60%, 1.5em 1.5em",
-                  }}>
-                  {[10, 25, 50, 100].map((n) => (
-                    <option key={n} value={n}>{n} / หน้า</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="text-sm text-slate-600">
-              แสดง {totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, totalItems)} จาก {totalItems} รายการ
-            </div>
-
-            <nav>
-              <ul className="inline-flex items-center -space-x-px">
-                <li>
-                  <button type="button" disabled={currentPage === 1} onClick={() => goToPage(currentPage - 1)}
-                    className="ml-0 rounded-l-lg border border-gray-300 bg-white px-3 py-2 leading-tight text-gray-500 hover:bg-gray-100 hover:text-gray-700 inline-flex items-center gap-1 disabled:cursor-not-allowed disabled:opacity-50">
-                    <IconChevronLeft />Previous
-                  </button>
-                </li>
-                <li>
-                  <button type="button" disabled={currentPage === totalPages || totalPages === 0} onClick={() => goToPage(currentPage + 1)}
-                    className="rounded-r-lg border border-gray-300 bg-white px-3 py-2 leading-tight text-gray-500 hover:bg-gray-100 hover:text-gray-700 inline-flex items-center gap-1 disabled:cursor-not-allowed disabled:opacity-50">
-                    Next<IconChevronRight />
-                  </button>
-                </li>
-              </ul>
-            </nav>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={itemsPerPage}
+            changeItemsPerPage={changeItemsPerPage}
+            goToPage={goToPage}
+          />
         </div>
 
         {/* Add/Edit Modal */}
@@ -558,11 +533,11 @@ export default function BudgetApp() {
           title={isEditMode ? "แก้ไขวัสดุ" : "เพิ่มวัสดุ"}
           footer={
             <>
-              <button type="button" onClick={() => setShowDialog(false)} style={{width: "100px"}}
+              <button type="button" onClick={() => setShowDialog(false)} style={{ width: "100px" }}
                 className="button-primary-border">
                 Cancel
               </button>
-              <button type="button" onClick={saveItem} style={{width: "100px"}}
+              <button type="button" onClick={saveItem} style={{ width: "100px" }}
                 className="button-primary">
                 Save
               </button>
