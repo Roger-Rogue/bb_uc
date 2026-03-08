@@ -1,52 +1,41 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { FilterDrawer } from "../components/filter-slide";
+import { SearchInput } from "../components/search-input";
+import KebabMenu from "@/app/components/kebabMenu";
+import Pagination from "@/app/components/pagination";
+import Swal from "sweetalert2";
 
-const BASE_URL = "http://localhost:8080/api/screen2.php";
+const BASE_URL = "http://localhost:3000/api";
 
 const ApiService = {
-  callScreen2: (params) => {
-    const query = new URLSearchParams(
-      Object.fromEntries(Object.entries(params).filter(([, v]) => v !== "" && v != null))
-    ).toString();
-    return fetch(`${BASE_URL}?${query}`).then((r) => r.json());
+  callScreen1: (params) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${BASE_URL}/ucHeader?${query}`).then((r) => r.json());
   },
   createItem: (data) =>
-    fetch(BASE_URL, {
+    fetch(`${BASE_URL}/ucHeader`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }).then((r) => r.json()),
   updateItem: (data) =>
-    fetch(BASE_URL, {
+    fetch(`${BASE_URL}/ucHeader`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }).then((r) => r.json()),
-  deleteItems: (uids) =>
-    fetch(BASE_URL, {
+  deleteItem: (uid) =>
+    fetch(`${BASE_URL}/ucHeader?UID=${uid}`, {
       method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ uids }),
     }).then((r) => r.json()),
 };
 
 // ============================================================
-// SweetAlert2 fallback
-// ============================================================
-const Swal =
-  typeof window !== "undefined" && window.Swal
-    ? window.Swal
-    : {
-        fire: ({ title, text, icon }) => {
-          alert(`[${icon?.toUpperCase()}] ${title}\n${text || ""}`);
-          return Promise.resolve({ isConfirmed: true });
-        },
-      };
-
-// ============================================================
 // Icons
 // ============================================================
+
 const IconX = ({ className = "w-4 h-4" }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -60,34 +49,38 @@ const IconRefresh = ({ className = "w-4 h-4" }) => (
   </svg>
 );
 
-const IconTrash = ({ className = "w-4 h-4" }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+const IconFilter = () => (
+  <svg
+    width="1em" height="1em" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    style={{ display: "inline-block", verticalAlign: "middle" }}
+  >
+    <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
   </svg>
 );
 
-const IconSearch = ({ className = "w-5 h-5" }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+const IconAdd = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 5v14M5 12h14" />
   </svg>
 );
 
 // ============================================================
-// Checkbox
+// Checkbox Component
 // ============================================================
 function Checkbox({ checked, onChange, indeterminate = false }) {
-  const TICK = `url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e")`;
   return (
     <input
       type="checkbox"
       checked={checked}
       ref={(el) => { if (el) el.indeterminate = indeterminate; }}
       onChange={onChange}
+      className="custom-checkbox"
       style={{
         appearance: "none",
-        width: "1rem", height: "1rem",
+        width: "1rem",
+        height: "1rem",
         border: "1px solid #d1d5db",
         borderRadius: "0.25rem",
         backgroundColor: checked ? "rgb(37,99,235)" : "#f3f4f6",
@@ -95,15 +88,16 @@ function Checkbox({ checked, onChange, indeterminate = false }) {
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
         cursor: "pointer",
-        backgroundImage: checked ? TICK : "none",
-        flexShrink: 0,
+        backgroundImage: checked
+          ? `url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e")`
+          : "none",
       }}
     />
   );
 }
 
 // ============================================================
-// Modal
+// Modal Component
 // ============================================================
 function Modal({ show, onClose, title, children, footer }) {
   if (!show) return null;
@@ -112,17 +106,17 @@ function Modal({ show, onClose, title, children, footer }) {
       <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={onClose} />
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="relative bg-white rounded-lg shadow-xl max-w-2xl w-full">
-          {title && (
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-              <button type="button" className="text-gray-400 hover:text-gray-500" onClick={onClose}>
-                <IconX className="h-6 w-6" />
-              </button>
-            </div>
-          )}
-          <div className="px-6 py-6 space-y-4">{children}</div>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+            <button type="button" className="text-gray-400 hover:text-gray-500" onClick={onClose}>
+              <IconX className="h-6 w-6" />
+            </button>
+          </div>
+          <div className="px-6 py-6 space-y-6">{children}</div>
           {footer && (
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-start gap-3">{footer}</div>
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-start gap-3">
+              {footer}
+            </div>
           )}
         </div>
       </div>
@@ -131,100 +125,52 @@ function Modal({ show, onClose, title, children, footer }) {
 }
 
 // ============================================================
-// Input / Textarea helpers (inline style แทน Tailwind focus:*)
+// ItemForm Component
 // ============================================================
-const inputCls = {
-  base: "w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm transition-shadow",
-};
-
-function Field({ label, required, children }) {
+function ItemForm({ item, onChange, unitList }) {
   return (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      {children}
-    </div>
-  );
-}
+    <>
+      <label className="text-label">ชื่อวัสดุ</label>
+      <input className="custom-input" type="text" value={item.header_name} placeholder="ชื่อวัสดุ" onChange={(e) => onChange({ ...item, header_name: e.target.value })} />
 
-function TextInput({ value, onChange, placeholder, type = "text" }) {
-  return (
-    <input
-      type={type}
-      value={value ?? ""}
-      onChange={onChange}
-      placeholder={placeholder}
-      className={inputCls.base}
-      style={{ outline: "none" }}
-      onFocus={(e) => (e.target.style.boxShadow = "0 0 0 2px rgb(59,130,246)")}
-      onBlur={(e) => (e.target.style.boxShadow = "none")}
-    />
-  );
-}
+      <label className="text-label mt-3">UOM</label>
+      <select value={item.unitId} onChange={(e) => onChange({ ...item, unitId: e.target.value })}
+        className="custom-input"
+        placeholder="ค้นหา">
+        <option value="">กรุณาเลือก</option>
+        {unitList.map((unit) => (
+          <option key={unit.value} value={unit.value}>
+            {unit.label}
+          </option>
+        ))}
+      </select>
 
-function TextArea({ value, onChange, placeholder, rows = 3 }) {
-  return (
-    <textarea
-      value={value ?? ""}
-      onChange={onChange}
-      placeholder={placeholder}
-      rows={rows}
-      className={inputCls.base}
-      style={{ outline: "none", resize: "vertical" }}
-      onFocus={(e) => (e.target.style.boxShadow = "0 0 0 2px rgb(59,130,246)")}
-      onBlur={(e) => (e.target.style.boxShadow = "none")}
-    />
-  );
-}
+      <label className="text-label mt-3">รหัสกระทรวงพาณิชย์</label>
+      <input className="custom-input" type="text" value={item.header_code} placeholder="รหัสกระทรวงพาณิชย์" onChange={(e) => onChange({ ...item, header_code: e.target.value })} />
 
-function FilterInput({ value, onChange, placeholder, type = "text" }) {
-  return (
-    <input
-      type={type}
-      value={value ?? ""}
-      onChange={onChange}
-      placeholder={placeholder}
-      className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm"
-      style={{ outline: "none" }}
-      onFocus={(e) => (e.target.style.boxShadow = "0 0 0 2px rgb(59,130,246)")}
-      onBlur={(e) => (e.target.style.boxShadow = "none")}
-    />
-  );
-}
 
-function FilterSelect({ value, onChange, children }) {
-  return (
-    <select
-      value={value}
-      onChange={onChange}
-      className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-      style={{ outline: "none" }}
-      onFocus={(e) => (e.target.style.boxShadow = "0 0 0 2px rgb(59,130,246)")}
-      onBlur={(e) => (e.target.style.boxShadow = "none")}
-    >
-      {children}
-    </select>
+    </>
   );
 }
 
 // ============================================================
-// Constants
+// Main BudgetApp Component
 // ============================================================
-const EMPTY_FILTERS = { searchText: "", year: "", code: "", status: "" };
-const EMPTY_ITEM = {
-  uid: "", fiscal: "", itemDetail: "", typeId: "",
-  unitId: "", price: 0, itemStatus: "T", uidUplevel: "",
-};
+const EMPTY_ITEM = { header_name: "", header_code: "", fiscal: "2568", unitId: "", remark: "" };
+const EMPTY_FILTERS = { header_name: "", header_code: "", unitId: "", itemStatus: "", searchText: "" };
 
-// ============================================================
-// Main Component
-// ============================================================
-export default function BudgetApp2() {
+export default function BudgetApp() {
+  // Data
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [unitList, setUnits] = useState([]);
+  const [activeMenu, setActiveMenu] = useState(null);
+
+  // Selection
   const [selectedUids, setSelectedUids] = useState(new Set());
+
+  // Filters
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -239,60 +185,71 @@ export default function BudgetApp2() {
 
   // Derived
   const totalItems = items.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
   const pagedItems = items.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
   const allSelected = items.length > 0 && selectedUids.size === items.length;
   const someSelected = selectedUids.size > 0 && !allSelected;
 
-  // ── Load data ────────────────────────────────────────────
+  // ── Load Data ────────────────────────────────────────────
   const loadData = useCallback(async (f = filters) => {
     setIsLoading(true);
     try {
-      const params = {
-        ...(f.searchText && { searchText: f.searchText }),
-        ...(f.year      && { fiscal:     f.year }),
-        ...(f.code      && { code:        f.code }),
-        ...(f.status    && { status:      f.status }),
-      };
-      const res = await ApiService.callScreen2(params);
-      if (res.success) {
-        setItems(res.data ?? []);
+      const params = {};
+      if (f.header_code) params.header_code = f.header_code;
+      if (f.header_name) params.header_name = f.header_name;
+      if (f.unitId) params.unitId = f.unitId;
+
+      const res = await ApiService.callScreen1(params);
+      if (res) {
+        setItems(res);
         setCurrentPage(1);
         setSelectedUids(new Set());
       } else {
-        Swal.fire({ title: "ผิดพลาด!", text: "เกิดข้อผิดพลาดในการโหลดข้อมูล", icon: "error" });
+        Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาดในการโหลดข้อมูล", "error");
       }
     } catch {
-      Swal.fire({ title: "ผิดพลาด!", text: "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้", icon: "error" });
+      Swal.fire("ผิดพลาด!", "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้", "error");
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  useEffect(() => { loadData(EMPTY_FILTERS); }, []);
+  const loadUnitList = useCallback(async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/selectionUnit`, { method: "GET" });
+      const data = await res.json();
+      const rawUnits = Array.isArray(data)
+        ? data
+        : Array.isArray(data.units)
+          ? data.units
+          : [];
+      setUnits(rawUnits.map((u) => ({ value: u.UID, label: u.unit_name })));
+      if (data.materials) setMaterials(data.materials);
+      if (data.laborTypes) setLaborTypes(data.laborTypes);
+    } catch (err) {
+      console.error("Error loading selections:", err);
+    }
+  }, []);
 
-  // ── Filter ───────────────────────────────────────────────
+  useEffect(() => {
+    loadData(EMPTY_FILTERS);
+    loadUnitList();
+  }, []);
+
+  // ── Filter handlers ──────────────────────────────────────
   const handleFilterChange = (key, value) => {
     const next = { ...filters, [key]: value };
     setFilters(next);
-    loadData(next);
+  };
+
+  const searchFilter = (key, value) => {
+    const next = { ...filters, [key]: value };
+    loadData(next)
   };
 
   const clearFilters = () => {
     setFilters(EMPTY_FILTERS);
     loadData(EMPTY_FILTERS);
-  };
-
-  // ── Selection ────────────────────────────────────────────
-  const toggleSelectAll = () => {
-    setSelectedUids(allSelected ? new Set() : new Set(items.map((i) => i.uid)));
-  };
-  const toggleItem = (uid) => {
-    setSelectedUids((prev) => {
-      const next = new Set(prev);
-      next.has(uid) ? next.delete(uid) : next.add(uid);
-      return next;
-    });
   };
 
   // ── CRUD ─────────────────────────────────────────────────
@@ -305,175 +262,200 @@ export default function BudgetApp2() {
 
   const openEditDialog = (item) => {
     setIsEditMode(true);
-    setEditingUid(item.uid);
-    setFormItem({
-      uid: item.uid ?? "",
-      fiscal: item.fiscal ?? "",
-      itemDetail: item.itemDetail ?? "",
-      typeId: item.typeId ?? "",
-      unitId: item.unitId ?? "",
-      price: item.price ?? 0,
-      itemStatus: item.itemStatus ?? "T",
-      uidUplevel: item.uidUplevel ?? "",
-    });
+    setEditingUid(item.UID);
+    setFormItem(item);
     setShowDialog(true);
   };
 
   const saveItem = async () => {
-    if (!formItem.fiscal || !formItem.itemDetail) {
-      Swal.fire({ title: "แจ้งเตือน", text: "กรุณากรอกปีและรายละเอียด", icon: "warning" });
+    if (!formItem.header_name) {
+      Swal.fire("แจ้งเตือน", "กรุณากรอก ชื่อวัสดุ", "warning");
       return;
     }
-    setIsLoading(true);
-    try {
-      const payload = isEditMode ? { ...formItem, uid: editingUid } : formItem;
-      const res = isEditMode
-        ? await ApiService.updateItem(payload)
-        : await ApiService.createItem(payload);
 
-      if (res.success) {
-        setShowSuccess(true);
-        loadData(filters);
-      } else {
-        Swal.fire({ title: "ผิดพลาด!", text: "เกิดข้อผิดพลาด: " + res.error, icon: "error" });
+    if (!formItem.unitId) {
+      Swal.fire("แจ้งเตือน", "กรุณาเลือก UOM", "warning");
+      return;
+    }
+
+    if (!formItem.header_code) {
+      Swal.fire("แจ้งเตือน", "กรุณากรอก รหัสกระทรวงพาณิชย์", "warning");
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: "ยืนยันการบันทึก",
+      text: "ต้องการบันทึกข้อมูลนี้หรือไม่?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "บันทึก",
+      cancelButtonText: "ยกเลิก",
+      buttonsStyling: false,
+      customClass: {
+        confirmButton: "sweet-confirm mr-2",
+        cancelButton: "sweet-cancel",
+      },
+    });
+
+    if (result.isConfirmed) {
+      setIsLoading(true);
+      try {
+        const res = isEditMode
+          ? await ApiService.updateItem({ UID: editingUid, ...formItem })
+          : await ApiService.createItem(formItem);
+
+        if (res) {
+          setShowDialog(false);
+          Swal.fire("สำเร็จ!", "บันทึกข้อมูลสำเร็จ", "success");
+          loadData(filters);
+        } else {
+          Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาด: " + res.error, "error");
+        }
+      } catch {
+        Swal.fire("ผิดพลาด!", isEditMode ? "ไม่สามารถแก้ไขข้อมูลได้" : "ไม่สามารถบันทึกข้อมูลได้", "error");
+      } finally {
+        setIsLoading(false);
       }
-    } catch {
-      Swal.fire({ title: "ผิดพลาด!", text: isEditMode ? "ไม่สามารถแก้ไขข้อมูลได้" : "ไม่สามารถบันทึกข้อมูลได้", icon: "error" });
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const deleteSelected = async () => {
-    if (selectedUids.size === 0) {
-      Swal.fire({ title: "แจ้งเตือน", text: "กรุณาเลือกรายการที่ต้องการลบ", icon: "warning" });
-      return;
-    }
+  const deleteSelected = async (uid) => {
     const result = await Swal.fire({
       title: "ยืนยันการลบ",
-      text: `ต้องการลบรายการที่เลือกทั้งหมด ${selectedUids.size} รายการ หรือไม่?`,
+      text: "ต้องการลบข้อมูลนี้หรือไม่?",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "ลบทั้งหมด",
+      confirmButtonText: "ยืนยัน",
       cancelButtonText: "ยกเลิก",
+      buttonsStyling: false,  // ปิด style default ของ Swal
+      customClass: {
+        confirmButton: "sweet-confirm mr-2",
+        cancelButton: "sweet-cancel",
+      },
     });
-    if (!result.isConfirmed) return;
 
-    setIsLoading(true);
-    try {
-      const res = await ApiService.deleteItems([...selectedUids]);
-      if (res.success) {
-        Swal.fire({ title: "สำเร็จ!", text: "ลบข้อมูลทั้งหมดสำเร็จ", icon: "success" });
-        setSelectedUids(new Set());
-        loadData(filters);
-      } else {
-        Swal.fire({ title: "ผิดพลาด!", text: "เกิดข้อผิดพลาด: " + res.error, icon: "error" });
+    if (result.isConfirmed) {
+      setIsLoading(true);
+      try {
+        const res = await ApiService.deleteItem(uid);
+        if (res) {
+          Swal.fire("สำเร็จ!", "ลบข้อมูลสำเร็จ", "success");
+          setSelectedUids(new Set());
+          loadData(filters);
+        } else {
+          Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาด: " + res.error, "error");
+        }
+      } catch {
+        Swal.fire("ผิดพลาด!", "ไม่สามารถลบข้อมูลได้", "error");
+      } finally {
+        setIsLoading(false);
       }
-    } catch {
-      Swal.fire({ title: "ผิดพลาด!", text: "ไม่สามารถลบข้อมูลได้", icon: "error" });
-    } finally {
-      setIsLoading(false);
     }
   };
 
   // ── Pagination ───────────────────────────────────────────
   const goToPage = (p) => { if (p >= 1 && p <= totalPages) setCurrentPage(p); };
-  const handleItemsPerPage = (v) => { setItemsPerPage(Number(v)); setCurrentPage(1); };
+
+  const handleItemsPerPage = (v) => {
+    setItemsPerPage(Number(v));
+    setCurrentPage(1);
+  };
+
+  const changeItemsPerPage = (val) => {
+    setItemsPerPage(val);
+    setCurrentPage(1);
+  };
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // ── Status color ─────────────────────────────────────────
+  const statusClass = (s) =>
+    s === "active" ? "text-green-600" : s === "inactive" ? "text-gray-600" : "text-yellow-600";
 
   // ── Render ───────────────────────────────────────────────
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-50 min-h-screen center-template">
       <div className="container mx-auto px-6 py-6">
 
+        <div className="text-black text-2xl font-medium mb-3">หัวข้อรายการ</div>
+
         {/* Filter Section */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex gap-4 mb-4 flex-wrap">
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6 flex justify-between gap-5">
 
-            {/* Search */}
-            <div className="flex-1 min-w-[160px]">
-              <label className="block text-gray-700 text-sm font-medium mb-2">ค้นหา</label>
-              <div className="relative">
-                <FilterInput
-                  value={filters.searchText}
-                  onChange={(e) => handleFilterChange("searchText", e.target.value)}
-                  placeholder="ค้นหา..."
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                  <IconSearch />
-                </span>
-              </div>
-            </div>
-
-            {/* Year */}
-            <div className="flex-1 min-w-[120px]">
-              <label className="block text-gray-700 text-sm font-medium mb-2">ปี</label>
-              <FilterInput
-                value={filters.year}
-                onChange={(e) => handleFilterChange("year", e.target.value)}
-                placeholder="เช่น 2565"
-              />
-            </div>
-
-            {/* Code */}
-            <div className="flex-1 min-w-[120px]">
-              <label className="block text-gray-700 text-sm font-medium mb-2">รหัส</label>
-              <FilterInput
-                value={filters.code}
-                onChange={(e) => handleFilterChange("code", e.target.value)}
-                placeholder="เช่น B00001"
-              />
-            </div>
-
-            {/* Status */}
-            <div className="flex-1 min-w-[140px]">
-              <label className="block text-gray-700 text-sm font-medium mb-2">สถานะ</label>
-              <FilterSelect
-                value={filters.status}
-                onChange={(e) => handleFilterChange("status", e.target.value)}
-              >
-                <option value="">-- ทั้งหมด --</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="pending">Pending</option>
-              </FilterSelect>
-            </div>
-          </div>
+          <SearchInput
+            value={filters.searchText}
+            onSearch={(val) => loadData(filters)}
+            placeholder="ค้นหารายการ..."
+          />
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end space-x-4">
-            <button onClick={clearFilters}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2 text-sm">
-              <IconX /><span>Clear</span>
-            </button>
             <button onClick={() => loadData(filters)}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2 text-sm">
-              <IconRefresh /><span>Refresh</span>
+              className="button-primary-border">
+              <IconRefresh />Refresh
             </button>
-            <button onClick={deleteSelected} disabled={selectedUids.size === 0}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2 text-sm text-gray-500 disabled:opacity-50 disabled:cursor-not-allowed">
-              <IconTrash /><span>ลบที่เลือก ({selectedUids.size})</span>
-            </button>
+
             <button onClick={openNewDialog}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2 text-sm">
-              <span className="text-xl font-light leading-none">+</span><span>New</span>
+              className="button-primary">
+              <IconAdd />เพิ่มข้อมูล
+            </button>
+
+            <button className="button-primary-border" onClick={() => setDrawerOpen(true)}>
+              <IconFilter />
+              ตัวกรอง
             </button>
           </div>
+
+          <FilterDrawer
+            open={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+            onSearch={searchFilter}
+            onClear={clearFilters}
+          >
+            <div className="grid grid-cols-1 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">วัสดุ</label>
+                <input type="text" value={filters.header_name}
+                  onChange={(e) => handleFilterChange("header_name", e.target.value)}
+                  className="custom-input"
+                  placeholder="วัสดุ..." />
+              </div>
+
+              {/* GFMIS */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">รหัสกระทรวงพาณิชย์</label>
+                <input type="text" value={filters.header_code}
+                  onChange={(e) => handleFilterChange("header_code", e.target.value)}
+                  className="custom-input"
+                  placeholder="รหัสกระทรวงพาณิชย์" />
+              </div>
+
+              {/* Item Status */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">หน่วย</label>
+                <select value={filters.unitId}
+                  onChange={(e) => handleFilterChange("unitId", e.target.value)}
+                  className="custom-input"
+                  placeholder="ค้นหา">
+                  <option value="">ทั้งหมด</option>
+                  {unitList.map((unit) => (
+                    <option key={unit.value} value={unit.value}>
+                      {unit.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </FilterDrawer>
         </div>
 
         {/* Data Table */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-sky-100 border-b border-gray-200">
+            <table className="modern-table w-full text-black">
+              <thead className="bg-gray-50/50">
                 <tr>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider w-12">
-                    <div className="flex justify-center">
-                      <Checkbox checked={allSelected} indeterminate={someSelected} onChange={toggleSelectAll} />
-                    </div>
-                  </th>
-                  {["#", "ปี", "รายการ"].map((h) => (
+                  {["", "No.", "รหัส", "ปี", "ประเภท", "รายการ"].map((h) => (
                     <th key={h} className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
                       {h}
                     </th>
@@ -483,28 +465,51 @@ export default function BudgetApp2() {
               <tbody className="divide-y divide-gray-200">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={4} className="px-6 py-10 text-center text-gray-400 text-sm">กำลังโหลด...</td>
+                    <td colSpan={6} className="px-6 py-10 text-center text-gray-400 text-sm">กำลังโหลด...</td>
                   </tr>
                 ) : pagedItems.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-6 py-10 text-center text-gray-400 text-sm">ไม่พบข้อมูล</td>
+                    <td colSpan={6} className="px-6 py-10 text-center text-gray-400 text-sm">ไม่พบข้อมูล</td>
                   </tr>
                 ) : (
                   pagedItems.map((item, idx) => (
-                    <tr key={item.uid ?? idx}
+                    <tr key={item.UID ?? idx}
                       className={`cursor-pointer transition-colors hover:bg-yellow-50 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
-                      onDoubleClick={() => openEditDialog(item)}>
-                      <td className="px-6 py-4 align-middle"
-                        onClick={(e) => { e.stopPropagation(); toggleItem(item.uid); }}>
-                        <div className="flex justify-center">
-                          <Checkbox checked={selectedUids.has(item.uid)} onChange={() => toggleItem(item.uid)} />
-                        </div>
+                    >
+                      <td>
+                        <KebabMenu
+                          itemId={item.UID}
+                          activeMenu={activeMenu}
+                          setActiveMenu={setActiveMenu}
+                        >
+                          <button
+                            className="kebab-menu-item w-full"
+                            onClick={() => openEditDialog(item)}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                              stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                              <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                            <span>แก้ไขรายการ</span>
+                          </button>
+
+                          <button
+                            className="kebab-menu-item w-full text-red-500 hover:bg-red-50"
+                            onClick={() => deleteSelected(item.UID)}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-trash-fill" viewBox="0 0 16 16">
+                              <path d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5M8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5m3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0" />
+                            </svg>
+                            <span>ลบรายการ</span>
+                          </button>
+                        </KebabMenu>
                       </td>
                       <td className="px-6 py-4 text-center align-middle text-sm text-gray-900 tabular-nums">
                         {(currentPage - 1) * itemsPerPage + idx + 1}
                       </td>
+                      <td className="px-6 py-4 align-middle text-sm text-gray-900">{item.header_code}</td>
                       <td className="px-6 py-4 align-middle text-sm text-gray-900">{item.fiscal}</td>
-                      <td className="px-6 py-4 align-middle text-sm text-gray-900">{item.itemDetail}</td>
+                      <td className="px-6 py-4 align-middle text-sm text-gray-900">{item.header_type}</td>
+                      <td className="px-6 py-4 align-middle text-sm text-gray-900">{item.header_name}</td>
                     </tr>
                   ))
                 )}
@@ -513,110 +518,44 @@ export default function BudgetApp2() {
           </div>
 
           {/* Pagination */}
-          <div className="bg-white px-6 py-4 flex items-center justify-between border-t border-gray-200">
-            <div className="w-36 md:w-40">
-              <select
-                value={itemsPerPage}
-                onChange={(e) => handleItemsPerPage(e.target.value)}
-                className="block w-full appearance-none border border-gray-300 bg-gray-50 text-gray-900 p-2 text-xs rounded-lg pr-8"
-                style={{
-                  outline: "none",
-                  backgroundImage: `linear-gradient(to right, #d1d5db 1px, transparent 1px), url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                  backgroundPosition: "right 2rem center, right 0.5rem center",
-                  backgroundRepeat: "no-repeat, no-repeat",
-                  backgroundSize: "1px 60%, 1.5em 1.5em",
-                }}>
-                {[10, 25, 50, 100].map((n) => (
-                  <option key={n} value={n}>{n} / หน้า</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="text-sm text-slate-600">
-              แสดง {totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}
-              –{Math.min(currentPage * itemsPerPage, totalItems)} จาก {totalItems} รายการ
-            </div>
-
-            <nav>
-              <ul className="inline-flex items-center -space-x-px">
-                <li>
-                  <button disabled={currentPage === 1} onClick={() => goToPage(currentPage - 1)}
-                    className="rounded-l-lg border border-gray-300 bg-white px-3 py-2 text-gray-500 hover:bg-gray-100 inline-flex items-center gap-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                    <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="h-5 w-5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m15 19-7-7 7-7" />
-                    </svg>
-                    Previous
-                  </button>
-                </li>
-                <li>
-                  <button disabled={currentPage >= totalPages} onClick={() => goToPage(currentPage + 1)}
-                    className="rounded-r-lg border border-gray-300 bg-white px-3 py-2 text-gray-500 hover:bg-gray-100 inline-flex items-center gap-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                    Next
-                    <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="h-5 w-5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m9 5 7 7-7 7" />
-                    </svg>
-                  </button>
-                </li>
-              </ul>
-            </nav>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={itemsPerPage}
+            changeItemsPerPage={changeItemsPerPage}
+            goToPage={goToPage}
+          />
         </div>
 
-        {/* Add / Edit Modal */}
+        {/* Add/Edit Modal */}
         <Modal
           show={showDialog}
           onClose={() => setShowDialog(false)}
-          title={isEditMode ? "แก้ไขรายการ" : "เพิ่มรายการใหม่"}
+          title={isEditMode ? "แก้ไขวัสดุ" : "เพิ่มวัสดุ"}
           footer={
             <>
-              <button type="button" onClick={() => setShowDialog(false)}
-                className="px-4 py-2 border border-gray-600 rounded-lg hover:bg-gray-100 transition-colors text-sm">
-                Cancel
+              <button type="button" onClick={() => setShowDialog(false)} style={{ width: "100px" }}
+                className="button-primary-border">
+                ยกเลิก
               </button>
-              <button type="button" onClick={saveItem}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
-                ตกลง
+              <button type="button" onClick={saveItem} style={{ width: "100px" }}
+                className="button-primary">
+                บันทึก
               </button>
             </>
           }
         >
-          <Field label="ปี (Fiscal)" required>
-            <TextInput value={formItem.fiscal} placeholder="เช่น 2565"
-              onChange={(e) => setFormItem({ ...formItem, fiscal: e.target.value })} />
-          </Field>
-          <Field label="รายละเอียด (Item Detail)" required>
-            <TextArea value={formItem.itemDetail} placeholder="รายละเอียดรายการ"
-              onChange={(e) => setFormItem({ ...formItem, itemDetail: e.target.value })} />
-          </Field>
-          <Field label="ประเภท (Type ID)">
-            <TextInput value={formItem.typeId} placeholder="รหัสประเภท"
-              onChange={(e) => setFormItem({ ...formItem, typeId: e.target.value })} />
-          </Field>
-          <Field label="หน่วย (Unit ID)">
-            <TextInput value={formItem.unitId} placeholder="รหัสหน่วย"
-              onChange={(e) => setFormItem({ ...formItem, unitId: e.target.value })} />
-          </Field>
-          <Field label="ราคา (Price)">
-            <TextInput type="number" value={formItem.price} placeholder="0"
-              onChange={(e) => setFormItem({ ...formItem, price: Number(e.target.value) })} />
-          </Field>
-          <Field label="รหัสอ้างอิง (UID Uplevel)">
-            <TextInput value={formItem.uidUplevel} placeholder="รหัสอ้างอิง"
-              onChange={(e) => setFormItem({ ...formItem, uidUplevel: e.target.value })} />
-          </Field>
+          <ItemForm item={formItem} onChange={setFormItem} unitList={unitList} />
         </Modal>
 
         {/* Success Modal */}
-        <Modal show={showSuccess} onClose={() => { setShowSuccess(false); setShowDialog(false); }}>
+        <Modal show={showSuccess} onClose={() => { setShowSuccess(false); setShowDialog(false); }} title="">
           <div className="text-center py-2">
-            <button className="absolute top-4 right-4 text-gray-400 hover:text-gray-500"
-              onClick={() => { setShowSuccess(false); setShowDialog(false); }}>
-              <IconX className="h-6 w-6" />
-            </button>
             <h3 className="text-xl font-semibold text-gray-900 mb-3">บันทึกสำเร็จ</h3>
             <p className="text-gray-600 mb-6">ข้อมูลถูกบันทึกเรียบร้อยแล้ว</p>
-            <button onClick={() => { setShowSuccess(false); setShowDialog(false); }}
-              className="px-8 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+            <button type="button" onClick={() => { setShowSuccess(false); setShowDialog(false); }}
+              className="px-8 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
               ตกลง
             </button>
           </div>
