@@ -178,7 +178,7 @@ function ItemForm({ item, onChange, unitList }) {
 // ============================================================
 // Main BudgetApp Component
 // ============================================================
-const EMPTY_ITEM = { header_name: "", header_code: "", fiscal: "", unitId: "", remark: "" };
+const EMPTY_ITEM = { header_name: "", header_code: "", fiscal: "2568", unitId: "", remark: "" };
 const EMPTY_FILTERS = { header_name: "", header_code: "", unitId: "", itemStatus: "", searchText: "" };
 
 export default function BudgetApp() {
@@ -285,7 +285,7 @@ export default function BudgetApp() {
   const openEditDialog = (item) => {
     setIsEditMode(true);
     setEditingUid(item.UID);
-    setFormItem({ header_name: item.header_name || "", header_code: item.header_code || "", unitId: item.unitId || "", remark: item.remark || "" });
+    setFormItem(item);
     setShowDialog(true);
   };
 
@@ -312,7 +312,7 @@ export default function BudgetApp() {
       showCancelButton: true,
       confirmButtonText: "บันทึก",
       cancelButtonText: "ยกเลิก",
-      buttonsStyling: false,  // ปิด style default ของ Swal
+      buttonsStyling: false,
       customClass: {
         confirmButton: "sweet-confirm mr-2",
         cancelButton: "sweet-cancel",
@@ -326,8 +326,9 @@ export default function BudgetApp() {
           ? await ApiService.updateItem({ UID: editingUid, ...formItem })
           : await ApiService.createItem(formItem);
 
-        if (res.success) {
-          setShowSuccess(true);
+        if (res) {
+          setShowDialog(false);
+          Swal.fire("สำเร็จ!", "บันทึกข้อมูลสำเร็จ", "success");
           loadData(filters);
         } else {
           Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาด: " + res.error, "error");
@@ -360,7 +361,7 @@ export default function BudgetApp() {
       try {
         const res = await ApiService.deleteItem(uid);
         if (res) {
-          Swal.fire("สำเร็จ!", "ลบข้อมูลดสำเร็จ", "success");
+          Swal.fire("สำเร็จ!", "ลบข้อมูลสำเร็จ", "success");
           setSelectedUids(new Set());
           loadData(filters);
         } else {
