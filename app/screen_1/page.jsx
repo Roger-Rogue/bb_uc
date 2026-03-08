@@ -49,13 +49,6 @@ const IconRefresh = ({ className = "w-4 h-4" }) => (
   </svg>
 );
 
-const IconTrash = ({ className = "w-4 h-4" }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-  </svg>
-);
-
 const IconFilter = () => (
   <svg
     width="1em" height="1em" viewBox="0 0 24 24" fill="none"
@@ -135,21 +128,6 @@ function Modal({ show, onClose, title, children, footer }) {
 // ItemForm Component
 // ============================================================
 function ItemForm({ item, onChange, unitList }) {
-  const field = (name, label, type = "text", placeholder = "", required = false) => (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      <input
-        type={type}
-        value={item[name] || ""}
-        onChange={(e) => onChange({ ...item, [name]: type === "number" ? Number(e.target.value) : e.target.value })}
-        placeholder={placeholder}
-        className="custom-input"
-      />
-    </div>
-  );
-
   return (
     <>
       <label className="text-label">ชื่อวัสดุ</label>
@@ -399,7 +377,7 @@ export default function BudgetApp() {
     <div className="bg-gray-50 min-h-screen center-template">
       <div className="container mx-auto px-6 py-6">
 
-        <div className="text-black text-2xl font-medium mb-3">หัวข้อรายการ</div>
+        <div className="text-black text-2xl font-medium mb-3">รายการ</div>
 
         {/* Filter Section */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6 flex justify-between gap-5">
