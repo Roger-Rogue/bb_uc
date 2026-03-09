@@ -431,7 +431,7 @@ export default function BudgetApp() {
         </div>
 
         {/* Data Table */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm p-6 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="modern-table w-full text-black">
               <thead className="bg-gray-50/50">
