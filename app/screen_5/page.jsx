@@ -18,8 +18,8 @@ const ApiService = {
     return fetch(`${BASE_URL}/boqApproving/detail?${uid}`).then((r) => r.json());
   },
   aprove: (data) =>
-    fetch(`${BASE_URL}/boqApproving/aprove`, {
-      method: "PUT",
+    fetch(`${BASE_URL}/boqApproving/approve`, {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         boq_uid: data.selectedUids,
@@ -28,7 +28,7 @@ const ApiService = {
     }).then((r) => r.json()),
   reject: (data) =>
     fetch(`${BASE_URL}/boqApproving/inapprove`, {
-      method: "PUT",
+      method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         boq_uid: data.selectedUids,
@@ -38,7 +38,7 @@ const ApiService = {
     }).then((r) => r.json()),
   sendback: (data) =>
     fetch(`${BASE_URL}/boqApproving/return`, {
-      method: "PUT",
+      method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         boq_uid: data.selectedUids,
@@ -292,16 +292,16 @@ export default function BudgetApp() {
         const param = {
           selectedUids: selectedUids,
         }
-        const res = await ApiService.reject(param);
+        const res = await ApiService.aprove(param);
         if (res) {
-          Swal.fire("สำเร็จ!", "ไม่อนุมัติข้อมูลสำเร็จ", "success");
-          setSelectedUids(new Set());
+          Swal.fire("สำเร็จ!", "อนุมัติข้อมูลสำเร็จ", "success");
+          setSelectedUids([]);
           getDetail();
         } else {
           Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาด: " + res.error, "error");
         }
       } catch {
-        Swal.fire("ผิดพลาด!", "ไม่สามารถไม่อนุมัติข้อมูลข้อมูลได้", "error");
+        Swal.fire("ผิดพลาด!", "ไม่สามารถอนุมัติข้อมูลได้", "error");
       } finally {
         setIsLoading(false);
       }
@@ -346,13 +346,13 @@ export default function BudgetApp() {
         const res = await ApiService.reject(param);
         if (res) {
           Swal.fire("สำเร็จ!", "ไม่อนุมัติข้อมูลสำเร็จ", "success");
-          setSelectedUids(new Set());
+          setSelectedUids([]);
           getDetail();
         } else {
           Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาด: " + res.error, "error");
         }
       } catch {
-        Swal.fire("ผิดพลาด!", "ไม่สามารถไม่อนุมัติข้อมูลข้อมูลได้", "error");
+        Swal.fire("ผิดพลาด!", "ไม่สามารถไม่อนุมัติข้อมูลได้", "error");
       } finally {
         setIsLoading(false);
       }
@@ -397,7 +397,7 @@ export default function BudgetApp() {
         const res = await ApiService.sendback(param);
         if (res) {
           Swal.fire("สำเร็จ!", "ส่งกลับแก้ไขข้อมูลสำเร็จ", "success");
-          setSelectedUids(new Set());
+          setSelectedUids([]);
           getDetail();
         } else {
           Swal.fire("ผิดพลาด!", "เกิดข้อผิดพลาด: " + res.error, "error");
