@@ -10,7 +10,7 @@ import Swal from "sweetalert2";
 const BASE_URL = "http://localhost:3000/api";
 
 const ApiService = {
-  callScreen1: (params) => {
+  callData: (params) => {
     const query = new URLSearchParams(params).toString();
     return fetch(`${BASE_URL}/ucHeader?${query}`).then((r) => r.json());
   },
@@ -199,7 +199,7 @@ export default function BudgetApp() {
       if (f.header_name) params.header_name = f.header_name;
       if (f.unitId) params.unitId = f.unitId;
 
-      const res = await ApiService.callScreen1(params);
+      const res = await ApiService.callData(params);
       if (res) {
         setItems(res);
         setCurrentPage(1);
@@ -377,7 +377,7 @@ export default function BudgetApp() {
     <div className="bg-gray-50 min-h-screen center-template">
       <div className="container mx-auto px-6 py-6">
 
-        <div className="text-black text-2xl font-medium mb-3">รายการ</div>
+        <div className="text-black text-2xl font-medium mb-3">หัวข้อรายการ</div>
 
         {/* Filter Section */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6 flex justify-between gap-5">
@@ -421,7 +421,6 @@ export default function BudgetApp() {
                   placeholder="วัสดุ..." />
               </div>
 
-              {/* GFMIS */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">รหัสกระทรวงพาณิชย์</label>
                 <input type="text" value={filters.header_code}
@@ -430,7 +429,6 @@ export default function BudgetApp() {
                   placeholder="รหัสกระทรวงพาณิชย์" />
               </div>
 
-              {/* Item Status */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">หน่วย</label>
                 <select value={filters.unitId}
