@@ -126,7 +126,6 @@ export default function BudgetApp() {
   const [isLoading, setIsLoading] = useState(false);
   const [unitList, setUnits] = useState([]);
   const [activeMenu, setActiveMenu] = useState(null);
-  const [selectAll, setSelectAll] = useState(false);
 
   // Filters
   const [filters, setFilters] = useState(EMPTY_FILTERS);
@@ -154,6 +153,9 @@ export default function BudgetApp() {
   const totalItemsDetail = itemsDetail.length;
   const totalPagesDetail = Math.ceil(totalItemsDetail / itemsPerPageDetail);
   const pagedItemsDetail = itemsDetail.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const [selectedUids, setSelectedUids] = useState([]);
+  const allSelected = pagedItemsDetail.length > 0 && pagedItemsDetail.every(i => selectedUids.includes(i.UID));
 
   // ── Load Data ────────────────────────────────────────────
   const loadData = useCallback(async (f = filters) => {
@@ -236,20 +238,20 @@ export default function BudgetApp() {
     loadData(EMPTY_FILTERS);
   };
 
-  const handleToggleSelectAll = () => {
-    const next = !selectAll;
-    setSelectAll(next);
-    setItemsDetail((prev) => prev.map((i) => ({ ...i, selected: next })));
+  const handleCheckAll = () => {
+    if (allSelected) {
+      setSelectedUids([]);
+    } else {
+      setSelectedUids(pagedItemsDetail.map(i => i.UID));
+    }
   };
 
-  const handleItemSelect = (idx) => {
-    setItems((prev) => {
-      const updated = [...prev];
-      updated[idx] = { ...updated[idx], selected: !updated[idx].selected };
-      const allSelected = updated.every((i) => i.selected);
-      setSelectAll(allSelected);
-      return updated;
-    });
+  const handleCheck = (uid) => {
+    setSelectedUids(prev =>
+      prev.includes(uid)
+        ? prev.filter(id => id !== uid)
+        : [...prev, uid]
+    );
   };
 
   const saveItem = async () => {
@@ -335,6 +337,13 @@ export default function BudgetApp() {
         setIsLoading(false);
       }
     }
+  };
+
+  const statusConfig = {
+    S: { label: 'รอพิจารณา', className: 'bg-blue-100 text-blue-600' },
+    A: { label: 'อนุมัติ', className: 'bg-green-100 text-green-600' },
+    R: { label: 'ส่งกลับแก้ไข', className: 'bg-yellow-100 text-yellow-600' },
+    W: { label: 'รอรับทราบ', className: 'bg-gray-100 text-gray-500' },
   };
 
   // ── Pagination ───────────────────────────────────────────
@@ -509,10 +518,18 @@ export default function BudgetApp() {
                           <div>{item.boq_name}</div>
                           <div>{item.boq_detail}</div>
                         </td>
-                        <td className="px-6 py-4 align-middle place-content-center text-sm text-gray-900">
-                          <div className="px-3 py-1 rounded-2xl text-center w-fit text-sm" style={{ backgroundColor: "#E7F7F1", color: "#5B975D" }}>{item.approveCount ?? "0"}/{item.count ?? "0"}</div>
+                        <td className="px-6 py-4 align-middle text-sm text-gray-900">
+                          <div className="grid place-content-center">
+                            <div className="px-3 py-1 rounded-2xl text-center w-fit text-sm" style={{ backgroundColor: "#E7F7F1", color: "#5B975D" }}>{item.approveCount ?? "0"}/{item.count ?? "0"}</div>
+                          </div>
                         </td>
-                        <td className="px-6 py-4 align-middle text-sm text-gray-900">{item.status}</td>
+                        <td className="px-6 py-4 align-middle text-sm text-gray-900">
+                          <div className="grid place-content-center">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusConfig[item.status]?.className ?? 'bg-gray-100 text-gray-400'}`}>
+                              {statusConfig[item.status]?.label ?? '-'}
+                            </span>
+                          </div>
+                        </td>
                       </tr>
                     ))
                   )}
@@ -541,10 +558,9 @@ export default function BudgetApp() {
                   <tr>
                     {[<input
                       type="checkbox"
-                      className="custom-checkbox"
-                      checked={selectAll}
-                      onChange={handleToggleSelectAll}
-                    />, "เลขที่สัญญา", "ชื่อโครงการ", "สถานะ", "สถานะการอนุมัติ"].map((h) => (
+                      checked={allSelected}
+                      onChange={handleCheckAll}
+                    />, "No.", "ID", "ประเภทสิ่งก่อสร้าง", "ชื่อรายการ", "พื้นที่/ระยะทาง", "ค่าวัสดุ", "ค่าแรง", "ราคารวม", "แก้ไขโดย"].map((h) => (
                       <th key={h} className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
                         {h}
                       </th>
@@ -568,13 +584,18 @@ export default function BudgetApp() {
                         <td>
                           <input
                             type="checkbox"
-                            className="custom-checkbox"
-                            checked={item.selected || false}
-                            onChange={() => handleItemSelect(idx)} />
+                            checked={selectedUids.includes(item.UID)}
+                            onChange={() => handleCheck(item.UID)}
+                          />
                         </td>
                         <td className="px-6 py-4 text-center align-middle text-sm text-gray-900 tabular-nums">
-                          {item.no}
+                          {(currentPageDetail - 1) * itemsPerPageDetail + idx + 1}
                         </td>
+                        <td className="px-6 py-4 align-middle text-sm text-gray-900">{item.boq_type}</td>
+                        <td className="px-6 py-4 align-middle text-sm text-gray-900">{item.name}</td>
+                        <td className="px-6 py-4 align-middle text-sm text-gray-900">{item.name}</td>
+                        <td className="px-6 py-4 align-middle text-sm text-gray-900">{item.name}</td>
+                        <td className="px-6 py-4 align-middle text-sm text-gray-900">{item.name}</td>
                         <td className="px-6 py-4 align-middle text-sm text-gray-900">{item.name}</td>
                         <td className="px-6 py-4 align-middle text-sm text-gray-900">{item.status}</td>
                         <td className="px-6 py-4 align-middle text-sm text-gray-900">{item.approveStatus}</td>
