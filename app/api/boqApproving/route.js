@@ -6,7 +6,6 @@ export async function GET() {
   try {
     const connection = await dbConfig.getConnection();
     try {
-      await connection.query("SET NAMES utf8mb4 COLLATE utf8mb4_general_ci");
       const [rows] = await connection.query('SELECT * FROM uc_boq WHERE status != ?', ['F']);
       return NextResponse.json(rows, { status: 200 });
     } finally {

@@ -28,13 +28,12 @@ export async function GET(request) {
       params.push(boqGroup);
     }
 
-    const dataSql = `SELECT boq_id, fiscal, boq_name, boq_detail, boq_group, price, status, remark, created_by, created_date, updated_by, updated_date FROM uc_boq ${where} LIMIT ? OFFSET ?`;
-    const countSql = `SELECT COUNT(*) AS totalCount FROM uc_boq ${where}`;
+    const dataSql = `SELECT boq_id, fiscal, boq_name, boq_detail, boq_group, price, status, remark, created_by, created_date, updated_by, updated_date FROM uc_boq ${where} OFFSET ? ROWS FETCH NEXT ? ROWS ONLY`;
+    const countSql = `SELECT COUNT(*) AS "totalCount" FROM uc_boq ${where}`;
 
     const connection = await dbConfig.getConnection();
     try {
-      await connection.query("SET NAMES utf8mb4 COLLATE utf8mb4_general_ci");
-      const [data] = await connection.query(dataSql, [...params, limit, offset]);
+      const [data] = await connection.query(dataSql, [...params, offset, limit]);
       const [countRows] = await connection.query(countSql, params);
       const totalCount = countRows[0]?.totalCount || 0;
       return NextResponse.json({ data, totalCount, page, limit }, { status: 200 });
@@ -53,7 +52,7 @@ export async function POST(request) {
     const boqId = body.boq_id || crypto.randomUUID();
 
     const sql = `INSERT INTO uc_boq (boq_id, fiscal, boq_name, boq_detail, boq_group, price, status, remark, created_by, created_date, updated_by, updated_date)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())`;
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, SYSDATE, ?, SYSDATE)`;
     const params = [
       boqId,
       body.fiscal || null,
@@ -84,7 +83,7 @@ export async function PUT(request) {
       return NextResponse.json({ message: 'boq_id is required' }, { status: 400 });
     }
 
-    const sql = `UPDATE uc_boq SET fiscal = ?, boq_name = ?, boq_detail = ?, boq_group = ?, price = ?, status = ?, remark = ?, updated_by = ?, updated_date = NOW() WHERE boq_id = ?`;
+    const sql = `UPDATE uc_boq SET fiscal = ?, boq_name = ?, boq_detail = ?, boq_group = ?, price = ?, status = ?, remark = ?, updated_by = ?, updated_date = SYSDATE WHERE boq_id = ?`;
     const params = [
       body.fiscal || null,
       body.boq_name || null,
@@ -120,7 +119,7 @@ export async function DELETE(request) {
     }
 
     const [result] = await dbConfig.query(
-      'UPDATE uc_boq SET status = ?, updated_date = NOW() WHERE boq_id = ?',
+      'UPDATE uc_boq SET status = ?, updated_date = SYSDATE WHERE boq_id = ?',
       ['F', boqId]
     );
     if (result.affectedRows === 0) {

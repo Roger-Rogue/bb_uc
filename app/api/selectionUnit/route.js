@@ -6,7 +6,6 @@ export async function GET() {
   try {
     const connection = await dbConfig.getConnection();
     try {
-      await connection.query("SET NAMES utf8mb4 COLLATE utf8mb4_general_ci");
       const [rows] = await connection.query('SELECT unit_id, unit_code, unit_name FROM uc_unit');
       return NextResponse.json(rows, { status: 200 });
     } finally {

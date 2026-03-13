@@ -27,7 +27,6 @@ export async function GET(request) {
 
     const connection = await dbConfig.getConnection();
     try {
-      await connection.query("SET NAMES utf8mb4 COLLATE utf8mb4_general_ci");
       const [rows] = await connection.query(sql, params);
       return NextResponse.json(rows, { status: 200 });
     } finally {
@@ -45,7 +44,7 @@ export async function POST(request) {
     const headerId = body.header_id || crypto.randomUUID();
 
     const sql = `INSERT INTO uc_header (header_id, fiscal, header_code, header_name, header_type, header_uplevel, group_code, cal_id, status, remark, created_by, created_date, updated_by, updated_date)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())`;
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, SYSDATE, ?, SYSDATE)`;
     const params = [
       headerId,
       body.fiscal || null,
@@ -78,7 +77,7 @@ export async function PUT(request) {
       return NextResponse.json({ message: 'header_id is required' }, { status: 400 });
     }
 
-    const sql = `UPDATE uc_header SET fiscal = ?, header_code = ?, header_name = ?, header_type = ?, header_uplevel = ?, group_code = ?, cal_id = ?, status = ?, remark = ?, updated_by = ?, updated_date = NOW() WHERE header_id = ?`;
+    const sql = `UPDATE uc_header SET fiscal = ?, header_code = ?, header_name = ?, header_type = ?, header_uplevel = ?, group_code = ?, cal_id = ?, status = ?, remark = ?, updated_by = ?, updated_date = SYSDATE WHERE header_id = ?`;
     const params = [
       body.fiscal || null,
       body.header_code || null,
@@ -116,7 +115,7 @@ export async function DELETE(request) {
     }
 
     const [result] = await dbConfig.query(
-      'UPDATE uc_header SET status = ?, updated_date = NOW() WHERE header_id = ?',
+      'UPDATE uc_header SET status = ?, updated_date = SYSDATE WHERE header_id = ?',
       ['F', headerId]
     );
     if (result.affectedRows === 0) {

@@ -22,7 +22,6 @@ export async function GET(request) {
 
     const connection = await dbConfig.getConnection();
     try {
-      await connection.query("SET NAMES utf8mb4 COLLATE utf8mb4_general_ci");
       const [rows] = await connection.query(sql, params);
       return NextResponse.json(rows, { status: 200 });
     } finally {
@@ -40,7 +39,7 @@ export async function POST(request) {
     const itemId = body.item_id || crypto.randomUUID();
 
     const sql = `INSERT INTO uc_item (item_id, fiscal, item_code, item_name, item_type, id_uplevel, unit_code, header_code, price, status, remark, created_by, created_date, updated_by, updated_date)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())`;
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, SYSDATE, ?, SYSDATE)`;
     const params = [
       itemId,
       body.fiscal || null,
@@ -74,7 +73,7 @@ export async function PUT(request) {
       return NextResponse.json({ message: 'item_id is required' }, { status: 400 });
     }
 
-    const sql = `UPDATE uc_item SET fiscal = ?, item_code = ?, item_name = ?, item_type = ?, id_uplevel = ?, unit_code = ?, header_code = ?, price = ?, status = ?, remark = ?, updated_by = ?, updated_date = NOW() WHERE item_id = ?`;
+    const sql = `UPDATE uc_item SET fiscal = ?, item_code = ?, item_name = ?, item_type = ?, id_uplevel = ?, unit_code = ?, header_code = ?, price = ?, status = ?, remark = ?, updated_by = ?, updated_date = SYSDATE WHERE item_id = ?`;
     const params = [
       body.fiscal || null,
       body.item_code || null,
@@ -113,7 +112,7 @@ export async function DELETE(request) {
     }
 
     const [result] = await dbConfig.query(
-      'UPDATE uc_item SET status = ?, updated_date = NOW() WHERE item_id = ?',
+      'UPDATE uc_item SET status = ?, updated_date = SYSDATE WHERE item_id = ?',
       ['F', itemId]
     );
     if (result.affectedRows === 0) {

@@ -9,7 +9,6 @@ export async function GET(request) {
 
     const connection = await dbConfig.getConnection();
     try {
-      await connection.query("SET NAMES utf8mb4 COLLATE utf8mb4_general_ci");
 
       let boqList, headerList, itemList;
 

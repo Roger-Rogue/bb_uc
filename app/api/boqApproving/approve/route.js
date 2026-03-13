@@ -12,7 +12,6 @@ export async function POST(request) {
 
     const connection = await dbConfig.getConnection();
     try {
-      await connection.query("SET NAMES utf8mb4 COLLATE utf8mb4_general_ci");
       await connection.beginTransaction();
 
       const boqLogId = crypto.randomUUID();
@@ -20,16 +19,15 @@ export async function POST(request) {
       // 1. Insert approve log status A
       await connection.query(
         `INSERT INTO boq_approve_log (boq_log_id, boq_id, report_id, status, reason, remark, created_date, created_by, updated_date, updated_by)
-         VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, NOW(), ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, SYSDATE, ?, SYSDATE, ?)`,
         [boqLogId, boq_id, report_id || null, 'A', reason || null, remark || null, created_by, created_by]
       );
 
       // 2. อัปเดต boq_item status = 'A' ผ่าน boq_header
       const [result] = await connection.query(
-        `UPDATE boq_item bi
-         JOIN boq_header bh ON bi.boq_header_code = bh.header_code
-         SET bi.status = ?, bi.updated_date = NOW(), bi.updated_by = ?
-         WHERE bh.boq_code = ?`,
+        `UPDATE boq_item
+         SET status = ?, updated_date = SYSDATE, updated_by = ?
+         WHERE boq_header_code IN (SELECT header_code FROM boq_header WHERE boq_code = ?)`,
         ['A', created_by, boq_id]
       );
 

@@ -13,7 +13,6 @@ export async function GET(request) {
 
     const connection = await dbConfig.getConnection();
     try {
-      await connection.query("SET NAMES utf8mb4 COLLATE utf8mb4_general_ci");
 
       if (!table) {
         const [groups] = await connection.query('SELECT * FROM uc_group WHERE status = ?', ['T']);

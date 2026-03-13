@@ -6,7 +6,6 @@ export async function GET() {
   try {
     const connection = await dbConfig.getConnection();
     try {
-      await connection.query("SET NAMES utf8mb4 COLLATE utf8mb4_general_ci");
       const [rows] = await connection.query(
         'SELECT group_id, group_code, group_name FROM uc_group WHERE status = ?',
         ['T']
