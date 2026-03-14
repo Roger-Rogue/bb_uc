@@ -469,6 +469,49 @@ export default function Screen4Page() {
   /* ───── construction popup helpers ───── */
   const closeConstructionPopup = () => setShowConstructionPopup(false);
 
+  const saveConstructionPopup = async () => {
+    if (!boqForm.boq_name) return alert("กรุณากรอกชื่อ BOQ");
+
+    const body = {
+      fiscal: selectedYear,
+      boq_name: boqForm.boq_name,
+      boq_detail: boqForm.boq_detail || null,
+      boq_group: boqForm.boq_group || null,
+      status: boqForm.status || "T",
+      remark: boqForm.remark || null,
+    };
+
+    try {
+      let res;
+      if (editingBoqUid) {
+        body.UID = editingBoqUid;
+        res = await fetch(`${API_BASE}/boq`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+      } else {
+        res = await fetch(`${API_BASE}/boq`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+      }
+
+      if (res.ok) {
+        setShowConstructionPopup(false);
+        setShowSuccessDialog(true);
+        loadWorkItems(currentPage, itemsPerPage);
+      } else {
+        const err = await res.json();
+        alert("Error: " + (err.message || "เกิดข้อผิดพลาด"));
+      }
+    } catch (err) {
+      console.error("Error saving BOQ:", err);
+      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+    }
+  };
+
   const toggleGroup = (groupId) => {
     const toggle = (groups) =>
       groups.map((g) =>
@@ -757,19 +800,19 @@ export default function Screen4Page() {
       <div className="bg-gray-50 min-h-screen center-template">
         {/* Main Content */}
         <div className="container mx-auto px-6 py-6">
-          <div className="text-black text-2xl font-medium mb-3">รายการ BOQ</div>
+          <div className="text-black text-2xl font-medium mb-3">รายการอัตราราคาต่อหน่วย</div>
           {/* Filter Section */}
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <div className="flex gap-4 mb-4">
               {/* รหัสงาน */}
               <div>
                 <label className="text-label">
-                  รหัสงาน
+                  รหัสหัวช้อรายการ
                 </label>
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="รหัสงาน..."
+                    placeholder="รหัสหัวช้อรายการ..."
                     className="custom-input"
                     value={filters.jobCode}
                     onChange={(e) =>
@@ -797,12 +840,12 @@ export default function Screen4Page() {
               {/* รายการงาน */}
               <div>
                 <label className="text-label">
-                  รายการงาน
+                  หัวข้อรายการ
                 </label>
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="รายการงาน..."
+                    placeholder="หัวข้อรายการ..."
                     className="custom-input"
                     value={filters.jobDescription}
                     onChange={(e) =>
@@ -851,7 +894,7 @@ export default function Screen4Page() {
               {/* วัสดุ */}
               <div>
                 <label className="text-label">
-                  วัสดุ
+                  รายการ
                 </label>
                 <CustomDropdown
                   options={materials}
@@ -1054,7 +1097,7 @@ export default function Screen4Page() {
             <div className="border-b border-gray-200 bg-gray-50 px-6 py-4 shrink-0">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-base font-semibold text-gray-900">
-                  {editingBoqUid ? "แก้ไขรายการ BOQ" : "สร้างรายการ BOQ ใหม่"}
+                  {editingBoqUid ? "แก้ไขรายการอัตราราคาต่อหน่วย" : "สร้างรายการอัตราราคาต่อหน่วยใหม่"}
                 </h3>
                 <button className="text-gray-400 hover:text-gray-600 p-1" onClick={closeConstructionPopup}>
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -1062,11 +1105,11 @@ export default function Screen4Page() {
               </div>
               <div className="grid grid-cols-5 gap-4">
                 <div>
-                  <label className="text-label">ชื่อ BOQ</label>
+                  <label className="text-label">รายการอัตราราคาต่อหน่วย</label>
                   <input
                     type="text"
                     className="custom-input"
-                    placeholder="ชื่อ BOQ..."
+                    placeholder="รายการอัตราราคาต่อหน่วย..."
                     value={boqForm.boq_name}
                     onChange={(e) => setBoqForm(f => ({ ...f, boq_name: e.target.value }))}
                   />
@@ -1082,11 +1125,11 @@ export default function Screen4Page() {
                   />
                 </div>
                 <div>
-                  <label className="text-label">กลุ่ม BOQ</label>
+                  <label className="text-label">หมวดรายการอัตราราคาต่อหน่วย</label>
                   <CustomDropdown
                     options={boqGroups}
                     value={boqForm.boq_group}
-                    placeholder="เลือกกลุ่ม..."
+                    placeholder="เลือกหมวดรายการอัตราราคาต่อหน่วย..."
                     isOpen={openDropdown === "boqGroup"}
                     onToggle={() => toggleDropdown("boqGroup")}
                     onSelect={(v) => {
@@ -1157,16 +1200,19 @@ export default function Screen4Page() {
                 </h2>
 
                 {/* Summary bar */}
-                <div className="flex flex-wrap gap-3 mb-4">
-                  <span className="inline-flex items-center gap-1 border border-gray-300 rounded px-3 py-1.5  text-xs bg-white">
-                    <span className="font-medium">ราคาวัสดุ :</span> {formatNumber(totalMaterialSum)} บาท
-                  </span>
-                  <span className="inline-flex items-center gap-1 border border-gray-300 rounded px-3 py-1.5  text-xs bg-white">
-                    <span className="font-medium">ค่าแรง :</span> {formatNumber(totalLaborSum)} บาท
-                  </span>
-                  <span className="inline-flex items-center gap-1 border border-gray-300 rounded px-3 py-1.5  text-xs bg-white">
-                    <span className="font-medium">ราคารวม :</span> {formatNumber(totalMaterialSum + totalLaborSum)} บาท
-                  </span>
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex flex-wrap gap-3 mb-4">
+                    <span className="inline-flex items-center gap-1 border border-gray-300 rounded px-3 py-1.5  text-xs bg-white">
+                      <span className="font-medium">ราคาวัสดุ :</span> {formatNumber(totalMaterialSum)} บาท
+                    </span>
+                    <span className="inline-flex items-center gap-1 border border-gray-300 rounded px-3 py-1.5  text-xs bg-white">
+                      <span className="font-medium">ค่าแรง :</span> {formatNumber(totalLaborSum)} บาท
+                    </span>
+                    <span className="inline-flex items-center gap-1 border border-gray-300 rounded px-3 py-1.5  text-xs bg-white">
+                      <span className="font-medium">ราคารวม :</span> {formatNumber(totalMaterialSum + totalLaborSum)} บาท
+                    </span>
+                  </div>
+                  <button className="button-primary mr-3">ปรับปรุง</button>
                 </div>
 
                 {/* Data table */}
@@ -1224,6 +1270,23 @@ export default function Screen4Page() {
                 </div>
               </div>
             </div>
+
+            {/* Footer */}
+            <div className="border-t border-gray-200 bg-gray-50 px-6 py-3 shrink-0 flex items-center justify-end gap-3">
+              <button
+                className="button-primary-border"
+                onClick={closeConstructionPopup}
+              >
+                ยกเลิก
+              </button>
+              <button
+                className="button-primary"
+                onClick={saveConstructionPopup}
+              >
+                บันทึก
+              </button>
+            </div>
+
           </div>
         </div>
       )}
